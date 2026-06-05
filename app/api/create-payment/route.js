@@ -1,25 +1,35 @@
 import { getAccessToken, BASE_URL } from "@/lib/paylink-auth";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
-
     const { email, productName, price } = body;
 
     if (!email || !productName || !price) {
       return Response.json(
         { error: "Missing required fields: email, productName, price" },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      return Response.json({ error: "Invalid price" }, { status: 400 });
+      return Response.json(
+        { error: "Invalid price" },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const token = await getAccessToken();
-
-    const backUrl = "https://paytedzee.webflow.io/success";
 
     const res = await fetch(`${BASE_URL}/api/request/register`, {
       method: "POST",
@@ -32,7 +42,7 @@ export async function POST(request) {
         requestType: "Payment",
         amount: parseFloat(price),
         currency: "USD",
-        backUrl,
+        backUrl: "https://paytedzee.webflow.io/success",
         isActive: true,
         allowAnonymous: true,
         isFlexible: false,
@@ -43,13 +53,18 @@ export async function POST(request) {
     const data = await res.json();
 
     if (!res.ok) {
-      return Response.json({ error: data.detail || "PayLink error" }, { status: res.status });
+      return Response.json(
+        { error: data.detail || "PayLink error" },
+        { status: res.status, headers: corsHeaders }
+      );
     }
 
-    // Returns { requestId, redirectUrl }
-    return Response.json(data);
+    return Response.json(data, { headers: corsHeaders });
   } catch (err) {
     console.error("create-payment error:", err);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
+    return Response.json(
+      { error: "Internal server error" },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }
