@@ -4,16 +4,22 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    const { amount, currency, requestInfo, backUrl } = body;
-    if (!amount || !currency || !requestInfo || !backUrl) {
+    const { email, productName, price } = body;
+
+    if (!email || !productName || !price) {
       return Response.json(
-        { error: "Missing required fields: amount, currency, requestInfo, backUrl" },
+        { error: "Missing required fields: email, productName, price" },
         { status: 400 }
       );
     }
 
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      return Response.json({ error: "Invalid price" }, { status: 400 });
+    }
+
     const token = await getAccessToken();
+
+    const backUrl = "https://paytedzee.webflow.io/success";
 
     const res = await fetch(`${BASE_URL}/api/request/register`, {
       method: "POST",
@@ -22,20 +28,15 @@ export async function POST(request) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        requestInfo,
-        requestType: body.requestType || "Payment",
-        amount,
-        currency,
+        requestInfo: `${productName} — ${email}`,
+        requestType: "Payment",
+        amount: parseFloat(price),
+        currency: "USD",
         backUrl,
         isActive: true,
-        allowAnonymous: body.allowAnonymous ?? true,
-        isFlexible: body.isFlexible ?? false,
-        language: body.language || "en",
-        // Optional fields
-        ...(body.amountMin && { amountMin: body.amountMin }),
-        ...(body.amountMax && { amountMax: body.amountMax }),
-        ...(body.maxCount && { maxCount: body.maxCount }),
-        ...(body.expirationDate && { expirationDate: body.expirationDate }),
+        allowAnonymous: true,
+        isFlexible: false,
+        language: "en",
       }),
     });
 
