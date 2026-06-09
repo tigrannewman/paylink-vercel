@@ -1,4 +1,5 @@
 import { getAccessToken, BASE_URL } from "@/lib/paylink-auth";
+import { kv } from "@vercel/kv";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,11 +43,9 @@ export async function POST(request) {
         requestType: "Payment",
         amount: parseFloat(price),
         currency: "USD",
-        // Email is appended here so it survives the PayLink redirect
-        // and arrives at /success as ?customerEmail=...
-        backUrl: `https://paytedzee.webflow.io/success?customerEmail=${encodeURIComponent(email)}`,
+        backUrl: "https://paytedzee.webflow.io/success",
         isActive: true,
-        allowAnonymous: false, // forces PayLink to use the email we pass via backUrl
+        allowAnonymous: true,
         isFlexible: false,
         language: "en",
       }),
@@ -60,6 +59,14 @@ export async function POST(request) {
         { status: res.status, headers: corsHeaders }
       );
     }
+
+    // Store form submission data in KV, keyed by requestId
+    // Expires after 24 hours (86400 seconds)
+    await kv.set(
+      `submission:${data.requestId}`,
+      { email, productName, price: parseFloat(price), submittedAt: new Date().toISOString() },
+      { ex: 86400 }
+    );
 
     return Response.json(data, { headers: corsHeaders });
   } catch (err) {

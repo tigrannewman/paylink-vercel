@@ -1,11 +1,10 @@
 import { getAccessToken, BASE_URL } from "@/lib/paylink-auth";
+import { kv } from "@vercel/kv";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get("id");
-    // Email threaded through from Webflow form via backUrl query param
-    const emailFromForm = searchParams.get("customerEmail");
 
     if (!orderId) {
       return Response.json({ error: "Missing payment id" }, { status: 400 });
@@ -25,9 +24,12 @@ export async function GET(request) {
     }
 
     const data = await res.json();
-
-    // data is an array — return the first (most recent) payment
     const payment = Array.isArray(data) ? data[0] : data;
+
+    // Look up the original Webflow form submission using requestId
+    const submission = payment.requestId
+      ? await kv.get(`submission:${payment.requestId}`)
+      : null;
 
     return Response.json({
       orderId: payment.orderId,
@@ -36,11 +38,12 @@ export async function GET(request) {
       amount: payment.amount,
       currency: payment.currency,
       customerName: payment.customerName,
-      // PayLink only populates customerEmail if the user entered it on their page.
-      // Fall back to the email we captured from the Webflow form.
-      customerEmail: payment.customerEmail || emailFromForm || null,
       paymentDate: payment.paymentDate,
       paymentId: payment.paymentId,
+      // Merged from Webflow form submission
+      customerEmail: payment.customerEmail || submission?.email || null,
+      productName: submission?.productName || null,
+      submittedAt: submission?.submittedAt || null,
     });
   } catch (err) {
     console.error("payment-result error:", err);
