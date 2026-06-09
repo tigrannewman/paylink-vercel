@@ -44,7 +44,7 @@ export async function POST(request) {
         currency: "USD",
         backUrl: "https://paytedzee.webflow.io/success",
         isActive: true,
-        allowAnonymous: true,
+        allowAnonymous: false,
         isFlexible: false,
         language: "en",
       }),
