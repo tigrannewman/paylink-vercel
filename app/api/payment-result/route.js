@@ -4,6 +4,8 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get("id");
+    // Email threaded through from Webflow form via backUrl query param
+    const emailFromForm = searchParams.get("customerEmail");
 
     if (!orderId) {
       return Response.json({ error: "Missing payment id" }, { status: 400 });
@@ -34,7 +36,9 @@ export async function GET(request) {
       amount: payment.amount,
       currency: payment.currency,
       customerName: payment.customerName,
-      customerEmail: payment.customerEmail,
+      // PayLink only populates customerEmail if the user entered it on their page.
+      // Fall back to the email we captured from the Webflow form.
+      customerEmail: payment.customerEmail || emailFromForm || null,
       paymentDate: payment.paymentDate,
       paymentId: payment.paymentId,
     });

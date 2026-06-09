@@ -38,13 +38,15 @@ export async function POST(request) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        requestInfo: `${productName} — ${email}`,
+        requestInfo: productName,
         requestType: "Payment",
         amount: parseFloat(price),
         currency: "USD",
-        backUrl: "https://paytedzee.webflow.io/success",
+        // Email is appended here so it survives the PayLink redirect
+        // and arrives at /success as ?customerEmail=...
+        backUrl: `https://paytedzee.webflow.io/success?customerEmail=${encodeURIComponent(email)}`,
         isActive: true,
-        allowAnonymous: false,
+        allowAnonymous: false, // forces PayLink to use the email we pass via backUrl
         isFlexible: false,
         language: "en",
       }),
